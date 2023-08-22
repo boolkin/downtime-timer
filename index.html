@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link id="favicon" rel="shortcut icon" type="image/png" href="img/green.png" />
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Простой агрегата</title>
+	<link rel="stylesheet" href="style/main.css">
+	<style>
+		body {
+			background: url(img/background28.jpg) 0 0 repeat;
+		}
+
+		.tagvals {
+			font-size: 3em;
+			font-weight: bold;
+			display: inline-block;
+		}
+
+		span {
+			font-size: 3em;
+			font-weight: bold;
+		}
+
+		.blink {
+			color: red;
+			animation: blink 1s linear infinite;
+			font-size: 2em;
+		}
+
+		@keyframes blink {
+			100% {
+				color: #00000000;
+			}
+		}
+	</style>
+	<script>
+		var getJSON = function (url, callback) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', url, true);
+			xhr.responseType = 'json';
+			xhr.onerror = function () {
+				document.getElementById("err").innerHTML = "Ошибка соединения!";
+			};
+			xhr.onload = function () {
+				var status = xhr.status;
+				if (status == 200) {
+					callback(null, xhr.response);
+					document.getElementById("err").innerHTML = "";
+				} else {
+					callback(status);
+				}
+			};
+			xhr.send();
+		};
+
+
+		setInterval(function () {
+			getJSON('http://127.0.0.1:8880', function (err, data) {
+				// В ответ приходит дата формата "22.08.2023 12:30:00" поэтому делим ее на составляющие чтобы привести к стандартному отображению
+				let dt = data.tag0.split(" ");
+				let date = dt[0].split(".");
+				let time = dt[1].split(":");
+				let stopT = new Date();
+				stopT.setDate(date[0]);
+				stopT.setMonth(date[1] - 1);
+				stopT.setFullYear(date[2]);
+				stopT.setHours(time[0]);
+				stopT.setMinutes(time[1]);
+				stopT.setSeconds(time[2]);
+
+				let now = new Date();
+				// При отсутствии простоя приходит дата 01.01.2001, поэтому если год в ответе 2001, то простоя нет
+				if (stopT.getFullYear() == '2001') {
+					document.getElementById("tag0").innerHTML = "НЕТ";
+					document.getElementById("stop").innerHTML = "<div class='tagvals'>НЕТ</div>";
+				}
+				else {
+					// Разница между временем начала простоя и текущим временем. 
+					// -10800000 пришлось добавить потому что к разнице добавляются лишние 3 часа, т.к. функция new Date(0) возвращает у меня Jan 01 1970 03:00:00
+					let timeDiff = new Date(now - stopT - 10800000);
+					let timeStop = timeDiff.toLocaleTimeString('ru-RU');
+					let dayStop = timeDiff.getDate() - 1; // и добавляет лишний день
+					let strStop = "<div class='tagvals'>" + dayStop + "</div><span> дней</span><br>";
+					strStop += "<div class='tagvals'>" + timeStop + "</div>"
+					document.getElementById("stop").innerHTML = strStop;
+					document.getElementById("tag0").innerHTML = stopT.toLocaleString('ru-RU');
+				}
+			});
+		}, 1000);
+
+
+	</script>
+</head>
+
+<body>
+	<div id='workpanel'>
+		<table style="width: 800px;">
+			<tr>
+				<td colspan="2" align="center">
+					<div style="font-size: 2em; font-weight: bold;">Простой агрегата</div>
+					<hr>
+				</td>
+			</tr>
+			<tr>
+				<td align="center" width="50%">Начало простоя</td>
+				<td align="center" width="50%">Время простоя</td>
+			</tr>
+			<tr>
+				<td align="center">
+					<div class="tagvals" id="tag0">0</div>
+				</td>
+				<td align="center" id="stop"><span>0</span></td>
+			</tr>
+			<tr>
+				<td colspan="2" align="center">
+					<div id="err" class="blink"></div>
+				</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+</html>
